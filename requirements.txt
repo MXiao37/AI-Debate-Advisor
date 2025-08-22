@@ -1,0 +1,5 @@
+streamlit
+metagpt
+fire
+asyncio
+pydantic
