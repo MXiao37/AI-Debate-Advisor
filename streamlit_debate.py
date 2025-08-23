@@ -6,35 +6,13 @@ import platform
 from typing import Any
 import os
 
-# Configure environment before MetaGPT imports
-if "OPENAI_API_KEY" in st.secrets:
-    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-if "SERPAPI_API_KEY" in st.secrets:
-    os.environ["SERPAPI_API_KEY"] = st.secrets["SERPAPI_API_KEY"]
 
-# Set required MetaGPT environment variables
-os.environ.setdefault("METAGPT_TEXT_TO_IMAGE_MODEL_URL", "")
-os.environ.setdefault("METAGPT_TEXT_TO_SPEECH_MODEL_URL", "")
-os.environ.setdefault("WORKSPACE_ROOT", "/tmp")
-
-# Set MetaGPT config path
-os.environ["METAGPT_CONFIG_PATH"] = "/mount/src/ai-debate-advisor/config.yaml"
-os.environ.setdefault("LLM_TYPE", "openai")
-os.environ.setdefault("MODEL_NAME", "gpt-3.5-turbo")
-os.environ.setdefault("MAX_TOKENS", "1000")
-os.environ.setdefault("TEMPERATURE", "0.7")
-
-try:
-    from metagpt.actions import Action, UserRequirement
-    from metagpt.logs import logger
-    from metagpt.roles import Role
-    from metagpt.schema import Message
-    from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
-    from metagpt.roles.role import RoleReactMode
-    METAGPT_AVAILABLE = True
-except ImportError as e:
-    METAGPT_AVAILABLE = False
-    st.error(f"MetaGPT not available: {str(e)}")
+from metagpt.actions import Action, UserRequirement
+from metagpt.logs import logger
+from metagpt.roles import Role
+from metagpt.schema import Message
+from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
+from metagpt.roles.role import RoleReactMode
 
 
 class Researcher(Role):
@@ -326,16 +304,6 @@ async def run_debate(idea: str, n_round: int = 5):
     
     return debate_log, evaluation, research_log, advice
 
-
-# Check API keys and MetaGPT availability
-def check_requirements():
-    if not METAGPT_AVAILABLE:
-        return False, "MetaGPT framework is not available."
-    
-    if not os.environ.get("OPENAI_API_KEY"):
-        return False, "OpenAI API key is required but not configured."
-    
-    return True, "All requirements met."
 
 # Streamlit UI
 st.set_page_config(
