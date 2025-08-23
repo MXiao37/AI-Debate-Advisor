@@ -5,26 +5,14 @@ import asyncio
 import platform
 from typing import Any
 import fire
-import os
 
-# Configure MetaGPT before importing
-try:
-    os.environ["OPENAI_API_KEY"] = st.secrets.get("OPENAI_API_KEY", "")
-    os.environ["SERPAPI_API_KEY"] = st.secrets.get("SERPAPI_API_KEY", "")
-    
-    from metagpt.actions import Action, UserRequirement
-    from metagpt.logs import logger
-    from metagpt.roles import Role
-    from metagpt.schema import Message
-    from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
-    from metagpt.roles.role import RoleReactMode
-    import re
-except ImportError as e:
-    st.error(f"Missing dependencies. Please ensure all packages are installed: {e}")
-    st.stop()
-except Exception as e:
-    st.error(f"Configuration error: {e}")
-    st.stop()
+from metagpt.actions import Action, UserRequirement
+from metagpt.logs import logger
+from metagpt.roles import Role
+from metagpt.schema import Message
+from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
+from metagpt.roles.role import RoleReactMode
+import re
 
 
 class Researcher(Role):
@@ -326,13 +314,13 @@ elif submitted and not topic:
 with st.sidebar:
     st.header("How it works")
     st.markdown("""
-    1. **Enter a topic** - Any controversial or discussion-worthy topic
+    1. **Enter a topic** - Any controversial or discussion-worthy topic for **school policy** only
     2. **Choose rounds** - More rounds = deeper discussion
-    3. **Start debate** - Three AI agents will discuss:
+    3. **Start debate** - Three AI agents will first research, then debate from different perspectives:
        - 🏫 **Principal** (School perspective)
-       - 👨‍🎓 **Student** (Student perspective) 
-       - 👩‍👧 **Parent** (Parent perspective)
-    4. **View results** - Get a balanced evaluation and full debate transcript
+       - 👨‍🎓 **John** (Student perspective) 
+       - 👩‍👧 **Mom** (Parent perspective)
+    4. **View results** - Get a summary evaluation and see the full debate transcript
     """)
     
     st.header("Example Topics")
