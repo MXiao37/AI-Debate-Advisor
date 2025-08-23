@@ -17,7 +17,8 @@ os.environ.setdefault("METAGPT_TEXT_TO_IMAGE_MODEL_URL", "")
 os.environ.setdefault("METAGPT_TEXT_TO_SPEECH_MODEL_URL", "")
 os.environ.setdefault("WORKSPACE_ROOT", "/tmp")
 
-# Set LLM configuration for MetaGPT
+# Set MetaGPT config path
+os.environ["METAGPT_CONFIG_PATH"] = "/mount/src/ai-debate-advisor/config.yaml"
 os.environ.setdefault("LLM_TYPE", "openai")
 os.environ.setdefault("MODEL_NAME", "gpt-3.5-turbo")
 os.environ.setdefault("MAX_TOKENS", "1000")
