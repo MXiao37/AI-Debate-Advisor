@@ -5,14 +5,26 @@ import asyncio
 import platform
 from typing import Any
 import fire
+import os
 
-from metagpt.actions import Action, UserRequirement
-from metagpt.logs import logger
-from metagpt.roles import Role
-from metagpt.schema import Message
-from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
-from metagpt.roles.role import RoleReactMode
-import re
+# Configure MetaGPT before importing
+try:
+    os.environ["OPENAI_API_KEY"] = st.secrets.get("OPENAI_API_KEY", "")
+    os.environ["SERPAPI_API_KEY"] = st.secrets.get("SERPAPI_API_KEY", "")
+    
+    from metagpt.actions import Action, UserRequirement
+    from metagpt.logs import logger
+    from metagpt.roles import Role
+    from metagpt.schema import Message
+    from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
+    from metagpt.roles.role import RoleReactMode
+    import re
+except ImportError as e:
+    st.error(f"Missing dependencies. Please ensure all packages are installed: {e}")
+    st.stop()
+except Exception as e:
+    st.error(f"Configuration error: {e}")
+    st.stop()
 
 
 class Researcher(Role):

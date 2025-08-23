@@ -1,5 +1,9 @@
 streamlit
-metagpt
+metagpt>=0.6.6
 fire
-asyncio
 pydantic
+openai
+requests
+beautifulsoup4
+selenium
+aiohttp
