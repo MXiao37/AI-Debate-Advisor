@@ -17,6 +17,12 @@ os.environ.setdefault("METAGPT_TEXT_TO_IMAGE_MODEL_URL", "")
 os.environ.setdefault("METAGPT_TEXT_TO_SPEECH_MODEL_URL", "")
 os.environ.setdefault("WORKSPACE_ROOT", "/tmp")
 
+# Set LLM configuration for MetaGPT
+os.environ.setdefault("LLM_TYPE", "openai")
+os.environ.setdefault("MODEL_NAME", "gpt-3.5-turbo")
+os.environ.setdefault("MAX_TOKENS", "1000")
+os.environ.setdefault("TEMPERATURE", "0.7")
+
 try:
     from metagpt.actions import Action, UserRequirement
     from metagpt.logs import logger
