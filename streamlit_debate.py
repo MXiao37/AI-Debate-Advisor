@@ -4,15 +4,30 @@ import streamlit as st
 import asyncio
 import platform
 from typing import Any
-import fire
+import os
 
-from metagpt.actions import Action, UserRequirement
-from metagpt.logs import logger
-from metagpt.roles import Role
-from metagpt.schema import Message
-from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
-from metagpt.roles.role import RoleReactMode
-import re
+# Configure environment before MetaGPT imports
+if "OPENAI_API_KEY" in st.secrets:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+if "SERPAPI_API_KEY" in st.secrets:
+    os.environ["SERPAPI_API_KEY"] = st.secrets["SERPAPI_API_KEY"]
+
+# Set required MetaGPT environment variables
+os.environ.setdefault("METAGPT_TEXT_TO_IMAGE_MODEL_URL", "")
+os.environ.setdefault("METAGPT_TEXT_TO_SPEECH_MODEL_URL", "")
+os.environ.setdefault("WORKSPACE_ROOT", "/tmp")
+
+try:
+    from metagpt.actions import Action, UserRequirement
+    from metagpt.logs import logger
+    from metagpt.roles import Role
+    from metagpt.schema import Message
+    from research_actions import CollectLinks, WebBrowseAndSummarize, ConductResearch
+    from metagpt.roles.role import RoleReactMode
+    METAGPT_AVAILABLE = True
+except ImportError as e:
+    METAGPT_AVAILABLE = False
+    st.error(f"MetaGPT not available: {str(e)}")
 
 
 class Researcher(Role):
@@ -129,6 +144,38 @@ class EvaluateDebate(Action):
         return rsp
 
 
+class ProvideAdvice(Action):
+    """Action: Provide compromise solutions with consequences analysis"""
+
+    PROMPT_TEMPLATE: str = """
+    ## ROLE
+    You are a neutral advisor analyzing a debate to provide compromise solutions.
+
+    ## DEBATE TOPIC
+    {topic}
+
+    ## EVALUATION
+    {evaluation}
+
+    ## TASK
+    Based on the evaluation, provide 3 compromise solutions that balance all perspectives.
+    For each solution:
+    1. **Solution**: Brief description
+    2. **Benefits**: How it addresses each party's concerns
+    3. **Consequences**: Potential negative outcomes for each party
+    4. **Implementation**: Practical steps
+
+    Focus on realistic compromises that all parties could accept.
+    """
+    
+    name: str = "ProvideAdvice"
+
+    async def run(self, topic: str, evaluation: str) -> str:
+        prompt = self.PROMPT_TEMPLATE.format(topic=topic, evaluation=evaluation)
+        rsp = await self._aask(prompt)
+        return rsp
+
+
 class DebateEvaluator(Role):
     name: str = "Evaluator"
     profile: str = "Neutral Analyst"
@@ -142,6 +189,20 @@ class DebateEvaluator(Role):
         debate_content = "\n\n".join(f"{msg.sent_from}: {msg.content}" for msg in debate_messages)
         evaluation = await todo.run(topic=topic, debate_content=debate_content)
         return evaluation
+
+
+class DebateAdvisor(Role):
+    name: str = "Advisor"
+    profile: str = "Compromise Specialist"
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        self.set_actions([ProvideAdvice])
+
+    async def advise(self, topic: str, evaluation: str) -> str:
+        todo = ProvideAdvice()
+        advice = await todo.run(topic=topic, evaluation=evaluation)
+        return advice
 
 
 class Debator(Role):
@@ -252,8 +313,22 @@ async def run_debate(idea: str, n_round: int = 5):
     evaluator = DebateEvaluator()
     evaluation = await evaluator.evaluate(idea, all_messages)
     
-    return debate_log, evaluation, research_log
+    # Generate advice
+    advisor = DebateAdvisor()
+    advice = await advisor.advise(idea, evaluation)
+    
+    return debate_log, evaluation, research_log, advice
 
+
+# Check API keys and MetaGPT availability
+def check_requirements():
+    if not METAGPT_AVAILABLE:
+        return False, "MetaGPT framework is not available."
+    
+    if not os.environ.get("OPENAI_API_KEY"):
+        return False, "OpenAI API key is required but not configured."
+    
+    return True, "All requirements met."
 
 # Streamlit UI
 st.set_page_config(
@@ -264,6 +339,13 @@ st.set_page_config(
 
 st.title("🗣️ AI Debate Platform")
 st.markdown("Enter a debate topic and watch AI agents discuss different perspectives!")
+
+# Check requirements
+requirements_ok, requirements_msg = check_requirements()
+if not requirements_ok:
+    st.error(f"⚠️ {requirements_msg}")
+    st.info("This app requires proper API key configuration. Please contact the administrator.")
+    st.stop()
 
 # Input section
 with st.form("debate_form"):
@@ -283,9 +365,23 @@ if submitted and topic:
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         
         try:
-            debate_log, evaluation, research_log = asyncio.run(run_debate(topic, n_rounds))
+            # Add progress tracking
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            # Show evaluation first
+            status_text.text("Starting debate...")
+            progress_bar.progress(10)
+            
+            debate_log, evaluation, research_log, advice = asyncio.run(run_debate(topic, n_rounds))
+            
+            progress_bar.progress(100)
+            status_text.text("Debate completed!")
+            
+            # Show advisor recommendations first
+            st.subheader("💡 Advisor Recommendations")
+            st.info(advice)
+            
+            # Show evaluation
             st.subheader("📋 Debate Evaluation")
             st.success(evaluation)
             
@@ -305,7 +401,8 @@ if submitted and topic:
                         st.divider()
                         
         except Exception as e:
-            st.error(f"Error running debate: {str(e)}")
+            st.error(f"❌ Error: {str(e)}")
+            st.info("Please try again with a different topic or contact support if the issue persists.")
 
 elif submitted and not topic:
     st.warning("Please enter a debate topic!")
